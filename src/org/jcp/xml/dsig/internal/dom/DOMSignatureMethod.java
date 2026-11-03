@@ -282,7 +282,6 @@ public abstract class DOMSignatureMethod extends DOMStructure
         signature.initSign((PrivateKey) key);
         if (log.isLoggable(Level.FINE)) {
             log.log(Level.FINE, "Signature provider:" +signature.getProvider());
-            log.log(Level.FINE, "Signing with key: " + key);
         }
 
         si.canonicalize(context, new SignerOutputStream(signature));
