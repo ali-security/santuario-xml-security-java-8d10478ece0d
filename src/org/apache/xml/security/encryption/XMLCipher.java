@@ -37,7 +37,6 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.IvParameterSpec;
 import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
 import org.apache.xml.security.algorithms.JCEMapper;
@@ -193,6 +192,8 @@ public class XMLCipher {
 	// (part of an UNWRAP operation)
 
 	private EncryptedData _ed;
+
+	private boolean secureValidation;
 
     /**
      * Creates a new <code>XMLCipher</code>.
@@ -604,6 +605,14 @@ public class XMLCipher {
 
 		_kek = kek;
 
+	}
+
+	public boolean isSecureValidation() {
+		return secureValidation;
+	}
+
+	public void setSecureValidation(boolean secureValidation) {
+		this.secureValidation = secureValidation;
 	}
 
 	/**
@@ -1277,6 +1286,7 @@ public class XMLCipher {
 
 		// Obtain the encrypted octets 
 		XMLCipherInput cipherInput = new XMLCipherInput(encryptedKey);
+		cipherInput.setSecureValidation(secureValidation);
 		byte [] encryptedBytes = cipherInput.getBytes();
 
 		String jceKeyAlgorithm =
@@ -1455,10 +1465,11 @@ public class XMLCipher {
 	    if (ki != null) {
 		try {
 		    // Add a EncryptedKey resolver
-		    ki.registerInternalKeyResolver(
-		        new EncryptedKeyResolver(
+		    EncryptedKeyResolver ekr = new EncryptedKeyResolver(
                             encryptedData.getEncryptionMethod().getAlgorithm(), 
-                            _kek));
+                            _kek);
+		    ekr.setSecureValidation(secureValidation);
+		    ki.registerInternalKeyResolver(ekr);
 		    _key = ki.getSecretKey();
 		} catch (KeyResolverException kre) {
 		    // We will throw in a second...
@@ -1474,6 +1485,7 @@ public class XMLCipher {
 
 		// Obtain the encrypted octets 
 		XMLCipherInput cipherInput = new XMLCipherInput(encryptedData);
+		cipherInput.setSecureValidation(secureValidation);
 		byte [] encryptedBytes = cipherInput.getBytes();
 
 		// Now create the working cipher
@@ -1840,6 +1852,7 @@ public class XMLCipher {
          */
         String serialize(NodeList content) throws Exception { //XMLEncryptionException {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            _canon.setSecureValidation(secureValidation);
             _canon.setWriter(baos);
             _canon.notReset();
             for (int i = 0; i < content.getLength(); i++) {                
@@ -1857,6 +1870,7 @@ public class XMLCipher {
          */ 
 		String canonSerialize(Node node) throws Exception {
 			ByteArrayOutputStream baos = new ByteArrayOutputStream();
+			_canon.setSecureValidation(secureValidation);
 			_canon.setWriter(baos);			
             _canon.notReset();
 			_canon.canonicalizeSubtree(node);			
@@ -1925,11 +1939,8 @@ public class XMLCipher {
 			String fragment = sb.toString();
 
             try {
-                DocumentBuilderFactory dbf =
-                    DocumentBuilderFactory.newInstance();
-				dbf.setNamespaceAware(true);
-				dbf.setAttribute("http://xml.org/sax/features/namespaces", Boolean.TRUE);
-				DocumentBuilder db = dbf.newDocumentBuilder();
+				DocumentBuilder db =
+				    XMLUtils.createDocumentBuilder(false, secureValidation);
 				Document d = db.parse(
 				    new InputSource(new StringReader(fragment)));
 
@@ -2119,8 +2130,10 @@ public class XMLCipher {
                     EncryptionConstants._TAG_ORIGINATORKEYINFO).item(0);
             if (null != originatorKeyInfoElement) {
                 try {
-                    result.setOriginatorKeyInfo(
-                        new KeyInfo(originatorKeyInfoElement, null));
+                    KeyInfo keyInfo =
+                        new KeyInfo(originatorKeyInfoElement, null);
+                    keyInfo.setSecureValidation(secureValidation);
+                    result.setOriginatorKeyInfo(keyInfo);
                 } catch (XMLSecurityException xse) {
                     throw new XMLEncryptionException("empty", xse);
                 }
@@ -2134,8 +2147,10 @@ public class XMLCipher {
                     EncryptionConstants._TAG_RECIPIENTKEYINFO).item(0);
             if (null != recipientKeyInfoElement) {
                 try {
-                    result.setRecipientKeyInfo(
-                        new KeyInfo(recipientKeyInfoElement, null));
+                    KeyInfo keyInfo =
+                        new KeyInfo(recipientKeyInfoElement, null);
+                    keyInfo.setSecureValidation(secureValidation);
+                    result.setRecipientKeyInfo(keyInfo);
                 } catch (XMLSecurityException xse) {
                     throw new XMLEncryptionException("empty", xse);
                 }
@@ -2319,7 +2334,9 @@ public class XMLCipher {
                     Constants.SignatureSpecNS, Constants._TAG_KEYINFO).item(0);
             if (null != keyInfoElement) {
 		try {
-		    result.setKeyInfo(new KeyInfo(keyInfoElement, null));
+		    KeyInfo ki = new KeyInfo(keyInfoElement, null);
+		    ki.setSecureValidation(secureValidation);
+		    result.setKeyInfo(ki);
 		} catch (XMLSecurityException xse) {
 		    throw new XMLEncryptionException("Error loading Key Info", 
 						     xse);
@@ -2407,7 +2424,9 @@ public class XMLCipher {
                     Constants.SignatureSpecNS, Constants._TAG_KEYINFO).item(0);
             if (null != keyInfoElement) {
 		try {
-		    result.setKeyInfo(new KeyInfo(keyInfoElement, null));
+		    KeyInfo ki = new KeyInfo(keyInfoElement, null);
+		    ki.setSecureValidation(secureValidation);
+		    result.setKeyInfo(ki);
 		} catch (XMLSecurityException xse) {
 		    throw new XMLEncryptionException
 			("Error loading Key Info", xse);

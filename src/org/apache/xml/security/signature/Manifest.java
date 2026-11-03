@@ -71,6 +71,12 @@ public class Manifest extends SignatureElementProxy {
    List _perManifestResolvers = null;
 
    /**
+    * If true, Document Type Declarations are not allowed in the documents
+    * parsed while verifying the References of this Manifest
+    */
+   private boolean secureValidation;
+
+   /**
     * Consturts {@link Manifest}
     *
     * @param doc the {@link Document} in which <code>XMLsignature</code> is placed
@@ -93,8 +99,23 @@ public class Manifest extends SignatureElementProxy {
     */
    public Manifest(Element element, String BaseURI)
            throws XMLSecurityException {
+      this(element, BaseURI, false);
+   }
+
+   /**
+    * Constructor Manifest
+    *
+    * @param element
+    * @param BaseURI
+    * @param secureValidation if true, Document Type Declarations are not
+    *    allowed in the documents parsed while verifying the References
+    * @throws XMLSecurityException
+    */
+   public Manifest(Element element, String BaseURI, boolean secureValidation)
+           throws XMLSecurityException {
 
       super(element, BaseURI);
+      this.secureValidation = secureValidation;
 
       // check out Reference children
       this._referencesEl = XMLUtils.selectDsNodes(this._constructionElement.getFirstChild(),
@@ -333,7 +354,8 @@ public class Manifest extends SignatureElementProxy {
                         try {
                            referencedManifest =
                               new Manifest((Element) n,
-                                           signedManifestNodes.getSourceURI());
+                                           signedManifestNodes.getSourceURI(),
+                                           secureValidation);
 
                            break findManifest;
                         } catch (XMLSecurityException ex) {
@@ -553,5 +575,9 @@ public class Manifest extends SignatureElementProxy {
     */
    public String getBaseLocalName() {
       return Constants._TAG_MANIFEST;
+   }
+
+   public boolean isSecureValidation() {
+      return secureValidation;
    }
 }

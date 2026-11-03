@@ -158,6 +158,9 @@ public abstract class ApacheTransform extends TransformService {
                 throw new TransformException(ex);
             }
         }
+        boolean secVal = Utils.secureValidation(xc);
+        in.setSecureValidation(secVal);
+        apacheTransform.setSecureValidation(secVal);
 
 	try {
 	    if (os != null) {

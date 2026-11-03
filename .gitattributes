@@ -1,0 +1,2 @@
+# CRLF line endings: diff this file as binary so that patches keep them
+src/org/apache/xml/security/keys/keyresolver/implementations/RetrievalMethodResolver.java binary

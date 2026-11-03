@@ -95,6 +95,12 @@ public class KeyInfo extends SignatureElementProxy {
         org.apache.commons.logging.LogFactory.getLog(KeyInfo.class.getName());
     List x509Datas=null;
     List encryptedKeys=null;
+
+    /**
+     * If true, Document Type Declarations are not allowed in the documents
+     * parsed while resolving the keys and certificates of this KeyInfo
+     */
+    private boolean secureValidation;
     
     static final List nullList;
     static {
@@ -126,6 +132,17 @@ public class KeyInfo extends SignatureElementProxy {
       super(element, BaseURI);
      // _storageResolvers.add(null);
 
+   }
+
+   /**
+    * Enables or disables secure validation. If enabled, Document Type
+    * Declarations are not allowed in the documents parsed while resolving
+    * the keys and certificates of this KeyInfo.
+    *
+    * @param secureValidation true to enable secure validation
+    */
+   public void setSecureValidation(boolean secureValidation) {
+      this.secureValidation = secureValidation;
    }
 
    /**
@@ -738,7 +755,8 @@ public class KeyInfo extends SignatureElementProxy {
                      PublicKey pk =
                            keyResolver.engineLookupAndResolvePublicKey((Element) currentChild,
                                                        uri,
-                                                        storage);
+                                                        storage,
+                                                        secureValidation);
 
                      if (pk != null) {
                     	 KeyResolver.hit(it);
@@ -774,7 +792,8 @@ public class KeyInfo extends SignatureElementProxy {
                    StorageResolver storage =
                       (StorageResolver) this._storageResolvers.get(k);
                    PublicKey pk = keyResolver
-                           .engineLookupAndResolvePublicKey((Element) currentChild, uri, storage);
+                           .engineLookupAndResolvePublicKey((Element) currentChild, uri, storage,
+                                                            secureValidation);
 
                      if (pk != null) {
                          return pk;
@@ -863,7 +882,7 @@ public class KeyInfo extends SignatureElementProxy {
 
 	           X509Certificate cert = keyResolver
 	                .engineLookupResolveX509Certificate((Element) currentChild, uri,
-	                		storage);
+	                		storage, secureValidation);
 
 	           if (cert != null) {                	   
 	               return cert;

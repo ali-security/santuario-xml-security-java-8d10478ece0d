@@ -23,7 +23,6 @@ import java.io.OutputStream;
 import java.util.Set;
 
 import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.xml.security.utils.XMLUtils;
 import org.w3c.dom.Document;
@@ -61,12 +60,10 @@ public abstract class CanonicalizerSpi {
 
       java.io.ByteArrayInputStream bais = new ByteArrayInputStream(inputBytes);
       InputSource in = new InputSource(bais);
-      DocumentBuilderFactory dfactory = DocumentBuilderFactory.newInstance();
 
       // needs to validate for ID attribute nomalization
-      dfactory.setNamespaceAware(true);
-
-      DocumentBuilder db = dfactory.newDocumentBuilder();
+      DocumentBuilder db = 
+         XMLUtils.createDocumentBuilder(false, secureValidation);
 
       /*
        * for some of the test vectors from the specification,
@@ -191,5 +188,16 @@ public abstract class CanonicalizerSpi {
    
    /** Reset the writter after a c14n */
    protected boolean reset=false;
+
+   /** If true, Document Type Declarations are not allowed when parsing */
+   protected boolean secureValidation;
    //J+
+
+   public boolean isSecureValidation() {
+      return secureValidation;
+   }
+
+   public void setSecureValidation(boolean secureValidation) {
+      this.secureValidation = secureValidation;
+   }
 }

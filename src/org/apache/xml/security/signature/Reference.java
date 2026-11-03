@@ -401,6 +401,9 @@ private Element digestValueElement;
          resolver.addProperties(this._manifest._resolverProperties);
 
          XMLSignatureInput input = resolver.resolve(URIAttr, this._baseURI);
+         if (this._manifest.isSecureValidation()) {
+            input.setSecureValidation(true);
+         }
                   
 
          return input;
@@ -431,6 +434,7 @@ private Element digestValueElement;
 			 throw new ReferenceNotInitializedException("empty", ex);
 		}
 		result.setSourceURI(input.getSourceURI());   
+		result.setSecureValidation(input.isSecureValidation());
 		return result;
 	
    }

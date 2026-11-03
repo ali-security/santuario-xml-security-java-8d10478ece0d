@@ -52,6 +52,7 @@ public class ModuleTest extends TestCase {
       suite.addTest(org.apache.xml.security.test.external.org.apache.xalan.XPathAPI.XalanBug1425Test.suite());
       suite.addTest(org.apache.xml.security.test.external.org.apache.xalan.XPathAPI.AttributeAncestorOrSelfTest.suite());
       suite.addTest(org.apache.xml.security.test.signature.AllTests.suite());      
+      suite.addTest(org.apache.xml.security.test.signature.SecureValidationDTDTest.suite());
       suite.addTest(org.apache.xml.security.test.utils.AllTests.suite());
       suite.addTest(org.apache.xml.security.c14n.implementations.AllTests.suite());
       suite.addTest(org.apache.xml.security.utils.UnsyncByteArrayOutputStreamTest.suite());

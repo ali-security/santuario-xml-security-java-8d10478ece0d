@@ -67,6 +67,12 @@ public final class Transform extends SignatureElementProxy {
     private TransformSpi transformSpi = null;
 
     /**
+     * If true, Document Type Declarations are not allowed in the documents
+     * parsed while performing this Transform
+     */
+    private boolean secureValidation;
+
+    /**
      * Constructs {@link Transform}
      *
      * @param doc the {@link Document} in which <code>Transform</code> will be 
@@ -275,6 +281,10 @@ public final class Transform extends SignatureElementProxy {
 
         XMLSignatureInput result = null;
 
+        if (secureValidation && input != null) {
+            input.setSecureValidation(true);
+        }
+
         try {
             result = transformSpi.enginePerformTransform(input, this);
         } catch (ParserConfigurationException ex) {
@@ -308,6 +318,10 @@ public final class Transform extends SignatureElementProxy {
         InvalidCanonicalizerException, TransformationException {
 
         XMLSignatureInput result = null;
+
+        if (secureValidation && input != null) {
+            input.setSecureValidation(true);
+        }
 
         try {
        	    result = transformSpi.enginePerformTransform(input, os, this);
@@ -362,5 +376,13 @@ public final class Transform extends SignatureElementProxy {
     /** @inheritDoc */
     public String getBaseLocalName() {
         return Constants._TAG_TRANSFORM;
+    }
+
+    public boolean isSecureValidation() {
+        return secureValidation;
+    }
+
+    public void setSecureValidation(boolean secureValidation) {
+        this.secureValidation = secureValidation;
     }
 }

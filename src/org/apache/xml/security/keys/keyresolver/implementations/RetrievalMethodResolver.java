@@ -80,6 +80,23 @@ public class RetrievalMethodResolver extends KeyResolverSpi {
    public PublicKey engineLookupAndResolvePublicKey(
            Element element, String BaseURI, StorageResolver storage)
               {
+      return engineLookupAndResolvePublicKey(element, BaseURI, storage, false);
+   }
+
+   /**
+    * Method engineLookupAndResolvePublicKey
+    * @inheritDoc
+    * @param element
+    * @param BaseURI
+    * @param storage
+    * @param secureValidation if true, Document Type Declarations are not
+    *    allowed in the documents parsed while resolving the key
+    *
+    */
+   public PublicKey engineLookupAndResolvePublicKey(
+           Element element, String BaseURI, StorageResolver storage,
+           boolean secureValidation)
+              {
 	   if  (!XMLUtils.elementIsInSignatureSpace(element,
                Constants._TAG_RETRIEVALMETHOD)) {      
 		   return null;
@@ -89,7 +106,7 @@ public class RetrievalMethodResolver extends KeyResolverSpi {
 		   //Create a retrieval method over the given element
 		   RetrievalMethod rm = new RetrievalMethod(element, BaseURI);
 	       String type = rm.getType();		   
-		   XMLSignatureInput resource=resolveInput(rm,BaseURI);			
+		   XMLSignatureInput resource=resolveInput(rm,BaseURI,secureValidation);
            if (RetrievalMethod.TYPE_RAWX509.equals(type)) {
                 //a raw certificate, direct parsing is done!
             	X509Certificate cert=getRawCertificate(resource);
@@ -98,7 +115,10 @@ public class RetrievalMethodResolver extends KeyResolverSpi {
 			    }
 				return null;
             };
-			Element e = obtainRefrenceElement(resource); 
+			Element e = obtainRefrenceElement(resource, secureValidation);
+			if (secureValidation && isRetrievalMethod(e)) {
+				return null;
+			}
 			return resolveKey(e,BaseURI,storage);
 	  } catch (XMLSecurityException ex) {
          log.debug("XMLSecurityException", ex);
@@ -114,7 +134,7 @@ public class RetrievalMethodResolver extends KeyResolverSpi {
       return null;
    }
 
-   static private Element obtainRefrenceElement(XMLSignatureInput resource) throws CanonicalizationException, ParserConfigurationException, IOException, SAXException, KeyResolverException {
+   static private Element obtainRefrenceElement(XMLSignatureInput resource, boolean secureValidation) throws CanonicalizationException, ParserConfigurationException, IOException, SAXException, KeyResolverException {
 	   Element e;
 	   if (resource.isElement()){
 		   e=(Element) resource.getSubNode();
@@ -124,7 +144,7 @@ public class RetrievalMethodResolver extends KeyResolverSpi {
 	   } else {
 		   //Retrieved resource is an inputStream
 		   byte inputBytes[] = resource.getBytes();
-		   e = getDocFromBytes(inputBytes);						
+		   e = getDocFromBytes(inputBytes, secureValidation);
 		   //otherwise, we parse the resource, create an Element and delegate
 		   if (log.isDebugEnabled()) 
 			   log.debug("we have to parse " + inputBytes.length + " bytes");
@@ -143,6 +163,23 @@ public class RetrievalMethodResolver extends KeyResolverSpi {
    public X509Certificate engineLookupResolveX509Certificate(
            Element element, String BaseURI, StorageResolver storage)
               {
+      return engineLookupResolveX509Certificate(element, BaseURI, storage, false);
+   }
+
+   /**
+    * Method engineLookupResolveX509Certificate
+    * @inheritDoc
+    * @param element
+    * @param BaseURI
+    * @param storage
+    * @param secureValidation if true, Document Type Declarations are not
+    *    allowed in the documents parsed while resolving the certificate
+    *
+    */
+   public X509Certificate engineLookupResolveX509Certificate(
+           Element element, String BaseURI, StorageResolver storage,
+           boolean secureValidation)
+              {
 	   if  (!XMLUtils.elementIsInSignatureSpace(element,
                Constants._TAG_RETRIEVALMETHOD)) {      
 		   return null;
@@ -151,12 +188,15 @@ public class RetrievalMethodResolver extends KeyResolverSpi {
 	   try {
          RetrievalMethod rm = new RetrievalMethod(element, BaseURI);
 		 String type = rm.getType();		   
-		 XMLSignatureInput resource=resolveInput(rm,BaseURI);			         
+		 XMLSignatureInput resource=resolveInput(rm,BaseURI,secureValidation);
 		 if (RetrievalMethod.TYPE_RAWX509.equals(type)) {
         	X509Certificate cert=getRawCertificate(resource);
             return cert;
 		 } 
-		 Element e = obtainRefrenceElement(resource);
+		 Element e = obtainRefrenceElement(resource, secureValidation);
+		 if (secureValidation && isRetrievalMethod(e)) {
+			 return null;
+		 }
 		 return resolveCertificate(e,BaseURI,storage);
       } catch (XMLSecurityException ex) {
          log.debug("XMLSecurityException", ex);
@@ -208,6 +248,24 @@ public class RetrievalMethodResolver extends KeyResolverSpi {
 		  return null;
    }
 
+   /**
+    * Returns true if the given element is a ds:RetrievalMethod. With secure
+    * validation a RetrievalMethod must not point to another RetrievalMethod:
+    * the referenced one would be resolved by the library wide KeyResolvers
+    * without secure validation.
+    *
+    * @param e
+    * @return true if e is a ds:RetrievalMethod element
+    */
+   static private boolean isRetrievalMethod(Element e) {
+	   if (e != null && XMLUtils.elementIsInSignatureSpace(e,
+               Constants._TAG_RETRIEVALMETHOD)) {
+		   log.debug("Error: It is forbidden to have one RetrievalMethod point to another with secure validation");
+		   return true;
+	   }
+	   return false;
+   }
+
    static private X509Certificate getRawCertificate(XMLSignatureInput resource) throws CanonicalizationException, IOException, CertificateException{
 	   byte inputBytes[] = resource.getBytes();	   
        // if the resource stores a raw certificate, we have to handle it
@@ -220,13 +278,16 @@ public class RetrievalMethodResolver extends KeyResolverSpi {
     * @return
     * @throws XMLSecurityException 
     */
-   static private XMLSignatureInput resolveInput(RetrievalMethod rm,String BaseURI) throws XMLSecurityException{
+   static private XMLSignatureInput resolveInput(RetrievalMethod rm,String BaseURI,boolean secureValidation) throws XMLSecurityException{
        Attr uri = rm.getURIAttr();
 	   //Apply the trnasforms
        Transforms transforms = rm.getTransforms();
        ResourceResolver resRes = ResourceResolver.getInstance(uri, BaseURI);
        if (resRes != null) {
           XMLSignatureInput resource = resRes.resolve(uri, BaseURI);
+          if (secureValidation) {
+             resource.setSecureValidation(true);
+          }
           if (transforms != null) {
         	  log.debug("We have Transforms");
 			  resource = transforms.performTransforms(resource);
@@ -240,14 +301,15 @@ public class RetrievalMethodResolver extends KeyResolverSpi {
     * Parses a byte array and returns the parsed Element.
     *
     * @param bytes
+    * @param secureValidation if true, Document Type Declarations are not
+    *    allowed in the parsed document
     * @return the Document Element after parsing bytes 
     * @throws KeyResolverException if something goes wrong
     */
-   static Element getDocFromBytes(byte[] bytes) throws KeyResolverException {
+   static Element getDocFromBytes(byte[] bytes, boolean secureValidation) throws KeyResolverException {
       try {
-         javax.xml.parsers.DocumentBuilderFactory dbf =javax.xml.parsers.DocumentBuilderFactory.newInstance();
-         dbf.setNamespaceAware(true);
-         javax.xml.parsers.DocumentBuilder db = dbf.newDocumentBuilder();
+         javax.xml.parsers.DocumentBuilder db =
+            XMLUtils.createDocumentBuilder(false, secureValidation);
          org.w3c.dom.Document doc =
             db.parse(new java.io.ByteArrayInputStream(bytes));
          return doc.getDocumentElement();

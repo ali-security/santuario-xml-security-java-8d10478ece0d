@@ -88,6 +88,30 @@ public abstract class KeyResolverSpi {
 	    return tmp.engineResolvePublicKey(element, BaseURI, storage);
     }
 
+   /**
+    * Method engineLookupAndResolvePublicKey
+    *
+    * The secure validation flag is passed on each call (instead of being
+    * stored in the resolver) because the library wide resolvers are shared.
+    * The default implementation ignores the flag and calls
+    * {@link #engineLookupAndResolvePublicKey(Element, String, StorageResolver)}.
+    *
+    * @param element
+    * @param BaseURI
+    * @param storage
+    * @param secureValidation if true, Document Type Declarations are not
+    *    allowed in the documents parsed while resolving the key
+    * @return resolved public key from the registered from the element.
+    *
+    * @throws KeyResolverException
+    */
+    public PublicKey engineLookupAndResolvePublicKey(
+      Element element, String BaseURI, StorageResolver storage,
+      boolean secureValidation)
+         throws KeyResolverException {
+    	return engineLookupAndResolvePublicKey(element, BaseURI, storage);
+    }
+
     private KeyResolverSpi cloneIfNeeded() throws KeyResolverException {
     	KeyResolverSpi tmp=this;    
     	if (globalResolver) {
@@ -137,6 +161,31 @@ public abstract class KeyResolverSpi {
     	return tmp.engineResolveX509Certificate(element, BaseURI, storage);
     	
     }
+
+   /**
+    * Method engineLookupResolveX509Certificate
+    *
+    * The secure validation flag is passed on each call (instead of being
+    * stored in the resolver) because the library wide resolvers are shared.
+    * The default implementation ignores the flag and calls
+    * {@link #engineLookupResolveX509Certificate(Element, String, StorageResolver)}.
+    *
+    * @param element
+    * @param BaseURI
+    * @param storage
+    * @param secureValidation if true, Document Type Declarations are not
+    *    allowed in the documents parsed while resolving the certificate
+    * @return resolved X509Certificate key from the registered from the elements
+    *
+    * @throws KeyResolverException
+    */
+    public X509Certificate engineLookupResolveX509Certificate(
+      Element element, String BaseURI, StorageResolver storage,
+      boolean secureValidation)
+         throws KeyResolverException {
+    	return engineLookupResolveX509Certificate(element, BaseURI, storage);
+    }
+
     /**
      * Method engineResolveSecretKey
      *

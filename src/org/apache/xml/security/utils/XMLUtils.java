@@ -29,6 +29,10 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+
 import org.apache.xml.security.c14n.CanonicalizationException;
 import org.apache.xml.security.c14n.Canonicalizer;
 import org.apache.xml.security.c14n.InvalidCanonicalizerException;
@@ -718,5 +722,35 @@ public class XMLUtils {
 
     public static boolean ignoreLineBreaks() {
         return ignoreLineBreaks;
+    }
+
+    /**
+     * Creates a namespace aware DocumentBuilder.
+     *
+     * @param validating whether the parser validates documents
+     * @param disAllowDocTypeDeclarations if true, documents containing a
+     *    Document Type Declaration (DTD) are rejected by the parser
+     * @return the DocumentBuilder
+     * @throws ParserConfigurationException
+     */
+    public static DocumentBuilder createDocumentBuilder(
+        boolean validating, boolean disAllowDocTypeDeclarations
+    ) throws ParserConfigurationException {
+        DocumentBuilderFactory dfactory = DocumentBuilderFactory.newInstance();
+        if (disAllowDocTypeDeclarations) {
+            try {
+                dfactory.setAttribute
+                    ("http://apache.org/xml/features/disallow-doctype-decl",
+                     Boolean.TRUE);
+            } catch (IllegalArgumentException ex) {
+                throw new ParserConfigurationException
+                    ("Unable to disallow Document Type Declarations: "
+                     + ex.getMessage());
+            }
+        }
+        dfactory.setValidating(validating);
+        dfactory.setNamespaceAware(true);
+
+        return dfactory.newDocumentBuilder();
     }
 }

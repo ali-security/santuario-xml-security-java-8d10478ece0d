@@ -104,6 +104,8 @@ public abstract class ApacheCanonicalizer extends TransformService {
 			": " + ice.getMessage(), ice);
 	    }
 	}
+	boolean secVal = Utils.secureValidation(xc);
+	apacheCanonicalizer.setSecureValidation(secVal);
 
 	if (os != null) {
 	    apacheCanonicalizer.setWriter(os);
@@ -116,6 +118,7 @@ public abstract class ApacheCanonicalizer extends TransformService {
 	    if (data instanceof ApacheData) {
 		XMLSignatureInput in = 
 		    ((ApacheData) data).getXMLSignatureInput();
+		in.setSecureValidation(secVal);
 		if (in.isElement()) {
 		    if (inclusiveNamespaces != null) {
                         return new OctetStreamData(new ByteArrayInputStream
@@ -229,6 +232,10 @@ public abstract class ApacheCanonicalizer extends TransformService {
                 throw new TransformException(ex);
             }
         }
+
+        boolean secVal = Utils.secureValidation(xc);
+        in.setSecureValidation(secVal);
+        apacheTransform.setSecureValidation(secVal);
 
         try {
             in = apacheTransform.performTransform(in, os);

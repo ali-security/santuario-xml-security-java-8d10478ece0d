@@ -54,6 +54,8 @@ public class XMLCipherInput {
 	/** MODES */
 	private int _mode;
 
+	private boolean secureValidation;
+
 	/**
 	 * Constructor for processing encrypted octets
 	 *
@@ -87,6 +89,14 @@ public class XMLCipherInput {
 			throw new XMLEncryptionException("CipherData is null");
 		}
 
+	}
+
+	public boolean isSecureValidation() {
+		return secureValidation;
+	}
+
+	public void setSecureValidation(boolean secureValidation) {
+		this.secureValidation = secureValidation;
 	}
 
 	/**
@@ -134,6 +144,7 @@ public class XMLCipherInput {
 
 	    if (input != null) {
 		logger.debug("Managed to resolve URI \"" + cr.getURI() + "\"");
+		input.setSecureValidation(secureValidation);
 	    } else {
 		logger.debug("Failed to resolve URI \"" + cr.getURI() + "\"");
 	    }

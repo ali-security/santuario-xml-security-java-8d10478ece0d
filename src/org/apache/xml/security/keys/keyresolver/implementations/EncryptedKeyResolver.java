@@ -54,6 +54,7 @@ public class EncryptedKeyResolver extends KeyResolverSpi {
 		
 	Key _kek;
 	String _algorithm;
+	private boolean secureValidation;
 
 	/**
 	 * Constructor for use when a KEK needs to be derived from a KeyInfo
@@ -75,6 +76,14 @@ public class EncryptedKeyResolver extends KeyResolverSpi {
 		_algorithm = algorithm;
 		_kek = kek;
 
+	}
+
+	public boolean isSecureValidation() {
+		return secureValidation;
+	}
+
+	public void setSecureValidation(boolean secureValidation) {
+		this.secureValidation = secureValidation;
 	}
 	
     /** @inheritDoc */
@@ -109,6 +118,7 @@ public class EncryptedKeyResolver extends KeyResolverSpi {
 			  try {
 				  XMLCipher cipher = XMLCipher.getInstance();
 				  cipher.init(XMLCipher.UNWRAP_MODE, _kek);
+				  cipher.setSecureValidation(secureValidation);
 				  EncryptedKey ek = cipher.loadEncryptedKey(element);
 				  key = (SecretKey) cipher.decryptKey(ek, _algorithm);
 			  }

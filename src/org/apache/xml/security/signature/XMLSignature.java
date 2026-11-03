@@ -121,6 +121,12 @@ public final class XMLSignature extends SignatureElementProxy {
      */
     private boolean _followManifestsDuringValidation = false;
 
+    /**
+     * If true, Document Type Declarations are not allowed in the documents
+     * parsed while validating this signature
+     */
+    private boolean secureValidation = false;
+
     private Element signatureValueElement;
 
     private final static int MODE_SIGN = 0;
@@ -269,8 +275,27 @@ public final class XMLSignature extends SignatureElementProxy {
      */
     public XMLSignature(Element element, String BaseURI)
         throws XMLSignatureException, XMLSecurityException {
+        this(element, BaseURI, false);
+    }
+
+    /**
+     * This will parse the element and construct the Java Objects.
+     * That will allow a user to validate the signature.
+     *
+     * @param element ds:Signature element that contains the whole signature
+     * @param BaseURI URI to be prepended to all relative URIs
+     * @param secureValidation whether secure validation is enabled or not.
+     *    If enabled, Document Type Declarations are not allowed in the
+     *    documents parsed while validating the signature.
+     * @throws XMLSecurityException
+     * @throws XMLSignatureException if the signature is badly formatted
+     */
+    public XMLSignature(Element element, String BaseURI, 
+        boolean secureValidation)
+        throws XMLSignatureException, XMLSecurityException {
 
         super(element, BaseURI);
+        this.secureValidation = secureValidation;
 
         // check out SignedInfo child
         Element signedInfoElem = XMLUtils.getNextElement(element.getFirstChild());
@@ -284,7 +309,8 @@ public final class XMLSignature extends SignatureElementProxy {
         }
 
         // create a SignedInfo object from that element
-        this._signedInfo = new SignedInfo(signedInfoElem, BaseURI);
+        this._signedInfo = 
+            new SignedInfo(signedInfoElem, BaseURI, secureValidation);
 	// get signedInfoElem again in case it has changed
         signedInfoElem = XMLUtils.getNextElement(element.getFirstChild());
 
@@ -309,6 +335,7 @@ public final class XMLSignature extends SignatureElementProxy {
             keyInfoElem.getNamespaceURI().equals(Constants.SignatureSpecNS) && 
             keyInfoElem.getLocalName().equals(Constants._TAG_KEYINFO)) {
             this._keyInfo = new KeyInfo(keyInfoElem, BaseURI);
+            this._keyInfo.setSecureValidation(this.secureValidation);
         }
 
         this._state = MODE_VERIFY;

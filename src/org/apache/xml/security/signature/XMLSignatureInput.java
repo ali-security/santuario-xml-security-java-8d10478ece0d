@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.Set;
 
 import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
 import org.apache.xml.security.c14n.CanonicalizationException;
@@ -107,6 +106,12 @@ public class XMLSignatureInput implements Cloneable {
    
     boolean needsToBeExpanded=false;
     OutputStream outputStream=null;
+
+    /**
+     * If true, Document Type Declarations are not allowed when this input
+     * is parsed
+     */
+    private boolean secureValidation;
 
     /**
      * Check if the structured is needed to be circumbented.
@@ -594,10 +599,8 @@ public class XMLSignatureInput implements Cloneable {
 	
     void convertToNodes() throws CanonicalizationException, 
 	ParserConfigurationException, IOException, SAXException {
-	DocumentBuilderFactory dfactory = DocumentBuilderFactory.newInstance();
-        dfactory.setValidating(false);        
-        dfactory.setNamespaceAware(true);
-        DocumentBuilder db = dfactory.newDocumentBuilder();
+        DocumentBuilder db = 
+            XMLUtils.createDocumentBuilder(false, secureValidation);
         // select all nodes, also the comments.        
         try {
             db.setErrorHandler(new org.apache.xml.security.utils
@@ -621,5 +624,13 @@ public class XMLSignatureInput implements Cloneable {
         }
         this._inputOctetStreamProxy=null;
         this.bytes=null;
+    }
+
+    public boolean isSecureValidation() {
+        return secureValidation;
+    }
+
+    public void setSecureValidation(boolean secureValidation) {
+        this.secureValidation = secureValidation;
     }
 }
