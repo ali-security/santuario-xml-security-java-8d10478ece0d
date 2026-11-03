@@ -148,13 +148,8 @@ public class TransformXPath extends TransformSpi {
 			return 1;
 		return 0;
 	    } catch (TransformerException e) {
-                Object[] eArgs = {currentNode};
 	        throw new XMLSecurityRuntimeException
-		    ("signature.Transform.node", eArgs, e);
-	    } catch (Exception e) {
-                Object[] eArgs = {currentNode, new Short(currentNode.getNodeType())};
-		throw new XMLSecurityRuntimeException
-		    ("signature.Transform.nodeAndType",eArgs, e);
+		    ("signature.Transform.XPathError");
 	    }
 	}
 	public int isNodeIncludeDO(Node n, int level) {

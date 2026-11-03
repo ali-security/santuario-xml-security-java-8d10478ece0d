@@ -576,7 +576,7 @@ public class XMLSignatureInput implements Cloneable {
 	    try {
 	        convertToNodes();
 	    } catch (Exception e) {
-	        throw new XMLSecurityRuntimeException("signature.XMLSignatureInput.nodesetReference",e);
+	        throw new XMLSecurityRuntimeException("signature.XMLSignatureInput.nodesetReference");
 	    }
         }
 	nodeFilters.add(filter);
