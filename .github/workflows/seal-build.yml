@@ -1,0 +1,116 @@
+name: seal-build
+
+# Upstream (Apache Santuario xml-security-java 1.4.3) has no GitHub Actions CI.
+# This workflow reproduces the project's own Ant build (build.xml):
+#   ant build.jar   -> build/xmlsec-1.4.3.jar
+#   ant test        -> AllTests (org.apache.xml.security.*)
+#   ant test_jsr105 -> javax/xml/crypto/**/*Test.java (JSR 105 API + interop)
+# The release jar was built with Ant 1.7.0, source/target 1.4. No JDK 1.4 is
+# downloadable without an Oracle login, so Sun JDK 1.5.0_22 (the oldest
+# obtainable, and one without a built-in JSR 105 that would shadow the
+# project's own javax.xml.crypto classes) compiles with build.xml's -source/-target 1.4.
+
+on:
+  workflow_dispatch:
+    inputs:
+      test-filter:
+        description: "Space-separated fully-qualified JUnit test classes to run instead of the full suite"
+        required: false
+        default: ""
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Sun JDK 1.5.0_22 + JCE unlimited policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/jdk" && cd "$HOME/jdk"
+          curl -fsSL -o jdk.bin https://archive.org/download/jdk-1_5_0_22-linux-i586/jdk-1_5_0_22-linux-amd64.bin
+          curl -fsSL -o jce.zip https://archive.org/download/jdk-1_5_0_22-linux-i586/jce_policy-1_5_0.zip
+          md5sum jdk.bin jce.zip
+          chmod +x jdk.bin
+          sh ./jdk.bin < <(yes yes) > /dev/null
+          JH="$HOME/jdk/jdk1.5.0_22"
+          unzip -q jce.zip -d jce
+          chmod -R u+w "$JH/jre/lib/security"
+          cp -f jce/*/local_policy.jar jce/*/US_export_policy.jar "$JH/jre/lib/security/"
+          echo "JAVA_HOME=$JH" >> "$GITHUB_ENV"
+          echo "$JH/bin" >> "$GITHUB_PATH"
+          "$JH/bin/java" -version
+
+      - name: Install Ant 1.7.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL https://archive.apache.org/dist/ant/binaries/apache-ant-1.7.0-bin.tar.gz | tar -xz -C "$HOME"
+          echo "ANT_HOME=$HOME/apache-ant-1.7.0" >> "$GITHUB_ENV"
+          echo "$HOME/apache-ant-1.7.0/bin" >> "$GITHUB_PATH"
+
+      - name: Fetch JUnit 3.8.1 (build.xml lib.junit, not committed in libs/)
+        run: curl -fsSL -o libs/junit-3.8.1.jar https://repo1.maven.org/maven2/junit/junit/3.8.1/junit-3.8.1.jar
+
+      - name: Serve the 2002 external signature references locally
+        # The interop vectors (merlin-xmldsig-eighteen/twenty-three, Phaos) sign
+        # http://www.w3.org/TR/xml-stylesheet, .../Signature/2002/04/xml-stylesheet.b64
+        # and http://www.ietf.org/rfc/rfc3161.txt by digest; the live pages have
+        # changed since 2002, so serve the original content from the repo's data/.
+        shell: bash
+        run: |
+          set -euo pipefail
+          SRV="$RUNNER_TEMP/srv"
+          mkdir -p "$SRV/TR" "$SRV/Signature/2002/04" "$SRV/rfc"
+          cp data/org/w3c/www/TR/xml-stylesheet.html "$SRV/TR/xml-stylesheet"
+          cp data/ie/baltimore/merlin-examples/merlin-xmldsig-twenty-three/xml-stylesheet.b64 "$SRV/Signature/2002/04/xml-stylesheet.b64"
+          curl -fsSL -o "$SRV/rfc/rfc3161.txt" https://www.rfc-editor.org/rfc/rfc3161.txt
+          echo "127.0.0.1 www.w3.org www.ietf.org" | sudo tee -a /etc/hosts
+          sudo nohup python3 -m http.server 80 --bind 127.0.0.1 --directory "$SRV" > "$RUNNER_TEMP/http.log" 2>&1 &
+          sleep 2
+          curl -fsS -o /dev/null -w '%{http_code} TR/xml-stylesheet\n' http://www.w3.org/TR/xml-stylesheet
+          curl -fsS -o /dev/null -w '%{http_code} rfc3161\n' http://www.ietf.org/rfc/rfc3161.txt
+
+      - name: Build jar (ant build.jar)
+        run: ant build.jar
+
+      - name: Test
+        shell: bash
+        env:
+          TEST_FILTER: ${{ inputs.test-filter }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/junit"
+          if [ -n "$TEST_FILTER" ]; then
+            mkdir -p build/libs/endorsed
+            cp libs/xalan.jar libs/serializer.jar libs/xml-apis.jar libs/xercesImpl.jar build/libs/endorsed/
+            CP="build/classes:build/test:$(ls libs/*.jar | tr '\n' ':')"
+            for t in $TEST_FILTER; do
+              java -Dbasedir="$PWD" -Djava.endorsed.dirs="$PWD/build/libs/endorsed" -cp "$CP" junit.textui.TestRunner "$t"
+            done
+          else
+            ant test
+            cp build/docs/xml/junit/TEST-*.xml "$RUNNER_TEMP/junit/"
+            ant test_jsr105
+            cp build/docs/xml/junit/TEST-*.xml "$RUNNER_TEMP/junit/"
+            python3 - "$RUNNER_TEMP/junit" <<'EOF'
+          import glob, sys, xml.etree.ElementTree as ET
+          tot = fail = err = 0
+          for f in sorted(glob.glob(sys.argv[1] + "/TEST-*.xml")):
+              s = ET.parse(f).getroot()
+              t, fl, e = int(s.get("tests")), int(s.get("failures")), int(s.get("errors"))
+              tot += t; fail += fl; err += e
+              print("%-90s tests=%d failures=%d errors=%d" % (s.get("name"), t, fl, e))
+          print("TOTAL: tests=%d passed=%d failures=%d errors=%d" % (tot, tot - fail - err, fail, err))
+          sys.exit(1 if (fail or err or tot == 0) else 0)
+          EOF
+          fi
+
+      - name: Upload jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: xmlsec-jar
+          path: build/xmlsec-1.4.3.jar
+          if-no-files-found: error
