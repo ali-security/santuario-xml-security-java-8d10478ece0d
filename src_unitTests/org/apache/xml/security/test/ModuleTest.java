@@ -54,6 +54,7 @@ public class ModuleTest extends TestCase {
       suite.addTest(org.apache.xml.security.test.signature.AllTests.suite());      
       suite.addTest(org.apache.xml.security.test.utils.AllTests.suite());
       suite.addTest(org.apache.xml.security.c14n.implementations.AllTests.suite());
+      suite.addTest(org.apache.xml.security.utils.UnsyncByteArrayOutputStreamTest.suite());
       suite.addTest(org.apache.xml.security.test.transforms.implementations.AllTests.suite());
       suite.addTest(org.apache.xml.security.test.transforms.RegisterTest.suite());
       suite.addTest(org.apache.xml.security.test.algorithms.AllTests.suite());
